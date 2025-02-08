@@ -6,14 +6,19 @@ import (
 )
 
 type Client struct {
-	sendCh chan []byte
-	hub *Hub
-	connection *websocket.Conn
+	sendCh 		chan Message
+	hub 		*Hub
+	connection 	*websocket.Conn
+	roomNumber 	string
+	name		string
 }
 
 func (c *Client) Read() {
 	defer func() {
-		c.hub.unregister <- c
+		c.hub.unregister <- RegisterMessage{
+			client: c,
+			roomNumber: c.roomNumber,
+		}
 		c.connection.Close()
 	}()
 	for {
@@ -22,15 +27,19 @@ func (c *Client) Read() {
 			log.Println(err)
 			break
 		}
-		c.hub.broadcast <- message
+		Message := Message{
+			SenderName: c.name,
+			Text: message,
+			Room: c.roomNumber,
+		}
+		c.hub.broadcast <- Message
 	}
 }
 
 func (c *Client) Write() {
 	defer c.connection.Close()
 	for message := range c.sendCh {
-		log.Println("got the message:", message)
-		if err := c.connection.WriteMessage(websocket.TextMessage, message); err != nil {
+		if err := c.connection.WriteJSON(message); err != nil {
 			log.Println(err)
 			break
 		}

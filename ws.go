@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"net/http"
+
 
 	"github.com/gorilla/websocket"
 )
@@ -20,18 +22,59 @@ func Handler(hub *Hub) http.HandlerFunc {
 			return
 		}
 
-		client := &Client{
-			connection: connection,
-			sendCh:     make(chan []byte, 256),
-			hub:        hub,
+		roomNumber := r.URL.Query().Get("room")
+		if roomNumber == "" {
+			http.Error(w, "Room parameter is missing", http.StatusBadRequest)
+			return
 		}
 
+		name := r.URL.Query().Get("name")
+		if name == "" {
+			http.Error(w, "Name parameter is missing", http.StatusBadRequest)
+			return
+		}
 
-		hub.register <- client
+		log.Println("Connected to room", roomNumber)
+
+		client := &Client{
+			connection: connection,
+			sendCh:     make(chan Message, 256),
+			hub:        hub,
+			roomNumber: string(roomNumber),
+			name:       name,
+		}
+
+		msg := RegisterMessage{
+			client:     client,
+			roomNumber: roomNumber,
+		}
+
+		hub.register <- msg
 
 		go client.Read()
 		go client.Write()
 	}
+}
+
+func CountClientsPerRoom(w http.ResponseWriter, r *http.Request) {
+	_, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		http.Error(w, "Failed to upgrade to WebSocket", http.StatusInternalServerError)
+		return
+	}
+
+	roomNumber := r.URL.Query().Get("room")
+	if roomNumber == "" {
+		http.Error(w, "Room parameter is missing", http.StatusBadRequest)
+		return
+	}
+
+	// для вывода количества клиентов в комнате
+	
+}
+
+func Room(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "room.html")
 }
 
 func Home(w http.ResponseWriter, r *http.Request) {

@@ -14,7 +14,7 @@ func main() {
 	hub := NewHub()
 	go hub.Run()
 
-	http.HandleFunc("/", Home)
+	http.HandleFunc("/", Room)
 	http.HandleFunc("/ws", Handler(hub))
 
 	log.Println("Сервер запущен на", *addr)

@@ -2,24 +2,39 @@ package main
 
 import "log"
 
+
+type Message struct {
+	SenderName 	string `json:"sender"`
+	Text 		[]byte `json:"text"`
+	Room 		string `json:"room"`
+}
+
+type RegisterMessage struct {
+	client *Client
+	roomNumber string
+}
+
+
 type Hub struct {
+
 	clients map[*Client]bool
 
-	rooms map[string][]*Client // TO DO
+	rooms map[string][]*Client
 	
-	broadcast chan []byte
+	broadcast chan Message
 
-	register chan *Client
+	register chan RegisterMessage
 
-	unregister chan *Client
+	unregister chan RegisterMessage
 }
 
 func NewHub() *Hub {
 	return &Hub{
 		clients: make(map[*Client]bool),
-		broadcast: make(chan []byte),
-		register: make(chan *Client),
-		unregister: make(chan *Client),
+		broadcast: make(chan Message),
+		register: make(chan RegisterMessage),
+		unregister: make(chan RegisterMessage),
+		rooms: make(map[string][]*Client),
 	}
 }
 
@@ -27,21 +42,39 @@ func NewHub() *Hub {
 func (h *Hub) Run() {
 	for {
 		select {
-			case client := <-h.register:
+			case regMessage := <-h.register:
+				client, roomNumber := regMessage.client, regMessage.roomNumber
 				h.clients[client] = true
-				log.Println("Client registered")
-			case client := <-h.unregister:
+				h.rooms[roomNumber] = append(h.rooms[roomNumber], client)
+				log.Println("Client registered into the room", roomNumber)
+			case unregMessage := <-h.unregister:
+				client, roomNumber := unregMessage.client, unregMessage.roomNumber
 				if _, ok := h.clients[client]; ok {
 					delete(h.clients, client)
+					
+					if roomClients, ok := h.rooms[roomNumber]; ok {
+						for i, c := range roomClients {
+							if c == client {
+								h.rooms[roomNumber] = append(roomClients[:i], roomClients[i+1:]...)
+								break
+							}
+						}
+						if len(h.rooms[roomNumber]) == 0 {
+							delete(h.rooms, roomNumber)
+						}
+					}
+					
 					close(client.sendCh)
-					log.Println("Client unregistered")
+					log.Println("Client unregistered from room:", roomNumber)
 				}
+			
 			case message := <- h.broadcast:
-				log.Println("message sent")
-				for client := range h.clients {
+				log.Println("Got the message")
+				_, _, roomNumber := message.SenderName, message.Text, message.Room
+				for _, client := range h.rooms[roomNumber] {
 					select {
 						case client.sendCh <- message:
-							log.Println("message sent to client")
+							log.Println("Message sent to client; room - ", roomNumber)
 						default:
 							close(client.sendCh)
 							delete(h.clients, client)
