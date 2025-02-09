@@ -29,7 +29,7 @@ func (c *Client) Read() {
 		}
 		Message := Message{
 			SenderName: c.name,
-			Text: message,
+			Text: string(message),
 			Room: c.roomNumber,
 		}
 		c.hub.broadcast <- Message

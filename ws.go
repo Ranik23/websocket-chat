@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -57,11 +58,13 @@ func Handler(hub *Hub) http.HandlerFunc {
 
 func CountClientsPerRoom(hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_, err := upgrader.Upgrade(w, r, nil)
+		connection, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			http.Error(w, "Failed to upgrade to WebSocket", http.StatusInternalServerError)
 			return
 		}
+
+		defer connection.Close()
 
 		roomNumber := r.URL.Query().Get("room")
 		if roomNumber == "" {
@@ -69,13 +72,25 @@ func CountClientsPerRoom(hub *Hub) http.HandlerFunc {
 			return
 		}
 
-		var clients []*Client
-		clients = append(clients, hub.rooms[roomNumber]...)
-	
+		for {
+			time.Sleep(1 * time.Second)
 
+			var clients []Client
 
+			for _, client := range hub.rooms[roomNumber] {
+				clients = append(clients, *client)
+			}
 
-		// для вывода количества клиентов в комнате
+			response := map[string]interface{}{
+				"room":    roomNumber,
+				"clients": clients,
+				"count":   len(clients),
+			}
+			if err := connection.WriteJSON(response); err != nil {
+				log.Println("Failed to send the message", err)
+				break
+			}
+		}
 	}
 }
 

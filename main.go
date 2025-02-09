@@ -16,6 +16,7 @@ func main() {
 
 	http.HandleFunc("/", Room)
 	http.HandleFunc("/ws", Handler(hub))
+	http.HandleFunc("/wscount", CountClientsPerRoom(hub))
 
 	log.Println("Сервер запущен на", *addr)
 	err := http.ListenAndServe(*addr, nil)
