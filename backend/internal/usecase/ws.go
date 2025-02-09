@@ -1,8 +1,9 @@
-package main
+package usecase
 
 import (
 	"log"
 	"net/http"
+	"websocket/backend/internal/entity"
 
 	"github.com/gorilla/websocket"
 )
@@ -13,7 +14,7 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-func Handler(hub *Hub) http.HandlerFunc {
+func Handler(hub *entity.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -35,22 +36,23 @@ func Handler(hub *Hub) http.HandlerFunc {
 
 		log.Printf("%s joined room %s", name, room)
 
-		newClient := &Client{
-			connection: conn,
-			sendCh:     make(chan Message, 256),
-			hub:        hub,
-			roomNumber: room,
-			name:       name,
+		newClient := &entity.Client{
+			Connection: conn,
+			SendCh:     make(chan entity.Message, 256),
+			Hub:        hub,
+			RoomNumber: room,
+			Name:       name,
 		}
 
-		hub.register <- RegisterMessage{client: newClient, roomNumber: room}
+		hub.Register <- entity.RegisterMessage{Client: newClient, RoomNumber: room}
 
 		go newClient.Read()
 		go newClient.Write()
 	}
 }
+
 // убрать отсюда, тк нужна либо синк мапа либо паника
-func CountClientsPerRoom(hub *Hub) http.HandlerFunc {
+func CountClientsPerRoom(hub *entity.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -66,9 +68,9 @@ func CountClientsPerRoom(hub *Hub) http.HandlerFunc {
 		}
 
 		for {
-			clients := make([]string, 0, len(hub.rooms[room]))
-			for _, client := range hub.rooms[room] {
-				clients = append(clients, client.name)
+			clients := make([]string, 0, len(hub.Rooms[room]))
+			for _, client := range hub.Rooms[room] {
+				clients = append(clients, client.Name)
 			}
 
 			response := map[string]interface{}{
@@ -86,17 +88,5 @@ func CountClientsPerRoom(hub *Hub) http.HandlerFunc {
 }
 
 func Room(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "room.html")
-}
-
-func Home(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	http.ServeFile(w, r, "home.html")
+	http.ServeFile(w, r, "frontend/views/room.html")
 }

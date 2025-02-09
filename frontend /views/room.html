@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Выбор комнаты для игрока</title>
+    <link rel="stylesheet" href="../css/room.css">
+</head>
+<body>
+<div id="container">
+    <!-- Панель игроков -->
+    <div id="players-panel">
+        <h3>Игроки в комнате</h3>
+        <ul id="clientsList"></ul>
+    </div>
+
+    <!-- Основной контент -->
+    <div id="main-content">
+        <div id="room-selection">
+            <h1>Выберите комнату</h1>
+            <input type="text" id="nameInput" placeholder="Введите ваше имя" autofocus>
+            <input type="text" id="roomInput" placeholder="Введите название комнаты">
+            <br>
+            <button id="joinRoomBtn">Присоединиться</button>
+        </div>
+        <div id="chat-section" style="display: none;">
+            <h2>Комната: <span id="roomName"></span></h2>
+            <div id="chat"></div>
+            <input type="text" id="input" placeholder="Введите сообщение...">
+        </div>
+    </div>
+</div>
+
+<script src="../js/room.js"></script>
+</body>
+</html>
