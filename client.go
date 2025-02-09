@@ -6,11 +6,11 @@ import (
 )
 
 type Client struct {
-	sendCh 		chan Message
+	sendCh 		chan Message		
 	hub 		*Hub
 	connection 	*websocket.Conn
 	roomNumber 	string
-	name		string
+	name		string			`json:"name"`
 }
 
 func (c *Client) Read() {
@@ -39,6 +39,7 @@ func (c *Client) Read() {
 func (c *Client) Write() {
 	defer c.connection.Close()
 	for message := range c.sendCh {
+		log.Println("text to be sent - ", message.Text)
 		if err := c.connection.WriteJSON(message); err != nil {
 			log.Println(err)
 			break

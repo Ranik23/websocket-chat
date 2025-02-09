@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -16,14 +15,14 @@ var upgrader = websocket.Upgrader{
 
 func Handler(hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		connection, err := upgrader.Upgrade(w, r, nil)
+		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			http.Error(w, "Failed to upgrade to WebSocket", http.StatusInternalServerError)
 			return
 		}
 
-		roomNumber := r.URL.Query().Get("room")
-		if roomNumber == "" {
+		room := r.URL.Query().Get("room")
+		if room == "" {
 			http.Error(w, "Room parameter is missing", http.StatusBadRequest)
 			return
 		}
@@ -34,60 +33,52 @@ func Handler(hub *Hub) http.HandlerFunc {
 			return
 		}
 
-		log.Println("Connected to room", roomNumber)
+		log.Printf("%s joined room %s", name, room)
 
-		client := &Client{
-			connection: connection,
+		newClient := &Client{
+			connection: conn,
 			sendCh:     make(chan Message, 256),
 			hub:        hub,
-			roomNumber: string(roomNumber),
+			roomNumber: room,
 			name:       name,
 		}
 
-		msg := RegisterMessage{
-			client:     client,
-			roomNumber: roomNumber,
-		}
+		hub.register <- RegisterMessage{client: newClient, roomNumber: room}
 
-		hub.register <- msg
-
-		go client.Read()
-		go client.Write()
+		go newClient.Read()
+		go newClient.Write()
 	}
 }
-
+// убрать отсюда, тк нужна либо синк мапа либо паника
 func CountClientsPerRoom(hub *Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		connection, err := upgrader.Upgrade(w, r, nil)
+		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			http.Error(w, "Failed to upgrade to WebSocket", http.StatusInternalServerError)
 			return
 		}
+		defer conn.Close()
 
-		defer connection.Close()
-
-		roomNumber := r.URL.Query().Get("room")
-		if roomNumber == "" {
+		room := r.URL.Query().Get("room")
+		if room == "" {
 			http.Error(w, "Room parameter is missing", http.StatusBadRequest)
 			return
 		}
 
 		for {
-			time.Sleep(1 * time.Second)
-
-			var clients []Client
-
-			for _, client := range hub.rooms[roomNumber] {
-				clients = append(clients, *client)
+			clients := make([]string, 0, len(hub.rooms[room]))
+			for _, client := range hub.rooms[room] {
+				clients = append(clients, client.name)
 			}
 
 			response := map[string]interface{}{
-				"room":    roomNumber,
+				"room":    room,
 				"clients": clients,
 				"count":   len(clients),
 			}
-			if err := connection.WriteJSON(response); err != nil {
-				log.Println("Failed to send the message", err)
+
+			if err := conn.WriteJSON(response); err != nil {
+				log.Println("Failed to send the message:", err)
 				break
 			}
 		}
