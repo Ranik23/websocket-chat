@@ -15,6 +15,8 @@ func main() {
 	hub := entity.NewHub()
 	go hub.Run()
 
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("frontend/static"))))
+
 	http.HandleFunc("/", usecase.Room)
 	http.HandleFunc("/ws", usecase.Handler(hub))
 	http.HandleFunc("/wscount", usecase.CountClientsPerRoom(hub))
