@@ -1,22 +1,23 @@
 package main
 
 import (
-	"log"
+	"encoding/json"
 	"github.com/gorilla/websocket"
+	"log"
 )
 
 type Client struct {
-	sendCh 		chan Message		
-	hub 		*Hub
-	connection 	*websocket.Conn
-	roomNumber 	string
-	name		string			`json:"name"`
+	sendCh     chan Message
+	hub        *Hub
+	connection *websocket.Conn
+	roomNumber string
+	name       string `json:"name"`
 }
 
 func (c *Client) Read() {
 	defer func() {
 		c.hub.unregister <- RegisterMessage{
-			client: c,
+			client:     c,
 			roomNumber: c.roomNumber,
 		}
 		c.connection.Close()
@@ -27,12 +28,18 @@ func (c *Client) Read() {
 			log.Println(err)
 			break
 		}
-		Message := Message{
-			SenderName: c.name,
-			Text: string(message),
-			Room: c.roomNumber,
+
+		var receivedMsg Message
+		err = json.Unmarshal(message, &receivedMsg) // Парсим JSON
+		if err != nil {
+			log.Println("Ошибка парсинга JSON:", err)
+			continue
 		}
-		c.hub.broadcast <- Message
+
+		receivedMsg.SenderName = c.name // Подставляем имя клиента
+		receivedMsg.Room = c.roomNumber
+
+		c.hub.broadcast <- receivedMsg
 	}
 }
 
