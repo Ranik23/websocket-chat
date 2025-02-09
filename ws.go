@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 
-
 	"github.com/gorilla/websocket"
 )
 
@@ -56,21 +55,28 @@ func Handler(hub *Hub) http.HandlerFunc {
 	}
 }
 
-func CountClientsPerRoom(w http.ResponseWriter, r *http.Request) {
-	_, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		http.Error(w, "Failed to upgrade to WebSocket", http.StatusInternalServerError)
-		return
-	}
+func CountClientsPerRoom(hub *Hub) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			http.Error(w, "Failed to upgrade to WebSocket", http.StatusInternalServerError)
+			return
+		}
 
-	roomNumber := r.URL.Query().Get("room")
-	if roomNumber == "" {
-		http.Error(w, "Room parameter is missing", http.StatusBadRequest)
-		return
-	}
+		roomNumber := r.URL.Query().Get("room")
+		if roomNumber == "" {
+			http.Error(w, "Room parameter is missing", http.StatusBadRequest)
+			return
+		}
 
-	// для вывода количества клиентов в комнате
+		var clients []*Client
+		clients = append(clients, hub.rooms[roomNumber]...)
 	
+
+
+
+		// для вывода количества клиентов в комнате
+	}
 }
 
 func Room(w http.ResponseWriter, r *http.Request) {

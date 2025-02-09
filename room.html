@@ -97,7 +97,7 @@
                 try {
                     const data = JSON.parse(event.data);
                     const sender = data.sender || 'Неизвестный';
-                    const text = data.text || '';
+                    const text = stringify(data.text) || '';
                     const chat = document.getElementById("chat");
                     const messageDiv = document.createElement("div");
                     messageDiv.className = "message";
