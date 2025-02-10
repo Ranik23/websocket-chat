@@ -46,7 +46,6 @@ func (c *Client) Read() {
 func (c *Client) Write() {
 	defer c.Connection.Close()
 	for message := range c.SendCh {
-		log.Println("text to be sent - ", message.Text)
 		if err := c.Connection.WriteJSON(message); err != nil {
 			log.Println(err)
 			break
