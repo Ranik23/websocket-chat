@@ -4,7 +4,6 @@ import (
 	"log"
 	"net/http"
 	"websocket/backend/internal/entity"
-
 	"github.com/gorilla/websocket"
 )
 
@@ -51,7 +50,6 @@ func Handler(hub *entity.Hub) http.HandlerFunc {
 	}
 }
 
-// убрать отсюда, тк нужна либо синк мапа либо паника
 func CountClientsPerRoom(hub *entity.Hub) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
@@ -68,22 +66,26 @@ func CountClientsPerRoom(hub *entity.Hub) http.HandlerFunc {
 		}
 
 		for {
-			clients := make([]string, 0, len(hub.Rooms[room]))
-			for _, client := range hub.Rooms[room] {
-				clients = append(clients, client.Name)
+			clients := []string{}
+		
+			if roomClients, ok := hub.Rooms.Load(room); ok {
+				for _, client := range roomClients.([]*entity.Client) {
+					clients = append(clients, client.Name)
+				}
 			}
-
+		
 			response := map[string]interface{}{
 				"room":    room,
 				"clients": clients,
 				"count":   len(clients),
 			}
-
+		
 			if err := conn.WriteJSON(response); err != nil {
 				log.Println("Failed to send the message:", err)
 				break
 			}
 		}
+		
 	}
 }
 
