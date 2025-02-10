@@ -10,7 +10,6 @@ type Hub struct {
 	Rooms      sync.Map
 	Broadcast  chan Message
 	Register   chan RegisterMessage
-	History    map[string][]Message
 	Unregister chan RegisterMessage
 }
 
@@ -20,7 +19,6 @@ func NewHub() *Hub {
 		Broadcast:  make(chan Message),
 		Register:   make(chan RegisterMessage),
 		Unregister: make(chan RegisterMessage),
-		History:    make(map[string][]Message),
 	}
 }
 
@@ -33,14 +31,8 @@ func (h *Hub) Run() {
 
 			clientsInRoom, _ := h.Rooms.LoadOrStore(roomNumber, []*Client{})
 			clientsInRoom = append(clientsInRoom.([]*Client), client)
-
 			h.Rooms.Store(roomNumber, clientsInRoom)
 
-			if history, exists := h.History[roomNumber]; exists {
-				for _, msg := range history {
-					client.SendCh <- msg
-				}
-			}
 			log.Println("Client registered into the room", roomNumber)
 		case unregMessage := <-h.Unregister:
 			client, roomNumber := unregMessage.Client, unregMessage.RoomNumber
