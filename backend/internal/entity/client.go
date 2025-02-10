@@ -30,13 +30,13 @@ func (c *Client) Read() {
 		}
 
 		var receivedMsg Message
-		err = json.Unmarshal(message, &receivedMsg) // Парсим JSON
+		err = json.Unmarshal(message, &receivedMsg)
 		if err != nil {
 			log.Println("Ошибка парсинга JSON:", err)
 			continue
 		}
 
-		receivedMsg.SenderName = c.Name // Подставляем имя клиента
+		receivedMsg.SenderName = c.Name 
 		receivedMsg.Room = c.RoomNumber
 
 		c.Hub.Broadcast <- receivedMsg

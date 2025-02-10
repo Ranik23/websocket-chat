@@ -77,7 +77,7 @@ func (h *Hub) Run() {
 				for _, client := range roomClients.([]*Client) {
 					select {
 					case client.SendCh <- message:
-						log.Println("Message sent to client - ", message, "room - ", roomNumber)
+						log.Println("Message sent to client:", client.Name, " - " , message, " Room - ", roomNumber)
 					default:
 						close(client.SendCh)
 						delete(h.Clients, client)
